@@ -30,9 +30,9 @@ Este repositório contém um projeto relacionado à segurança da informação. 
 
 Para iniciar o programa, execute o seguinte comando:
 
-    ```sh
-    python watchfile.py
-    ```
+```sh
+python watchfile.py
+```
 
 ## Contribuição
 
