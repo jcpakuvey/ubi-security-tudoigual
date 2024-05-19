@@ -140,5 +140,15 @@ cython_debug/
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Python
 
 *.pem
+
+*.enc
 share/*.enc
 share/**/*.enc
+
+*.dec
+share/*.dec
+share/**/*.dec
+
+*.sig
+share/*.sig
+share/**/*.sig
