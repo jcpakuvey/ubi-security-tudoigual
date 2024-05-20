@@ -1,4 +1,6 @@
 import socket
+import struct
+import threading
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
@@ -11,7 +13,7 @@ from watchdog_handler import WatchdogHandler
 from security_util import generate_keys
 
 class SecureServer:
-    def __init__(self, host, port, private_key_file, public_key_file, password):
+    def __init__(self, host, port, private_key_file, public_key_file, password, watch_path):
         generate_keys(private_key_file, public_key_file, password)
 
         self.host = host
@@ -22,7 +24,7 @@ class SecureServer:
         self.private_key = self.load_private_key()
         self.public_key = self.load_public_key()
         self.public_pem = self.serialize_public_key()
-
+        self.watch_path = watch_path
 
 
     def load_private_key(self):
@@ -43,11 +45,12 @@ class SecureServer:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
-    def handle_new_file(self, path):
+    def handle_new_file(self, path, encrypted_key):
         print(path)
+        print(encrypted_key)
         print('server')
 
-    def start_server(self):
+    def start_server2(self):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((self.host, self.port))
         server_socket.listen(1)
@@ -72,3 +75,57 @@ class SecureServer:
 
         print('Mensagem recebida:', decrypted_message.decode('utf-8'))
         conn.close()
+
+    def start_server(self):
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((self.host, self.port))
+        server_socket.listen(5)
+
+        print('Aguardando conexão do cliente...')
+        while True:
+            conn, addr = server_socket.accept()
+            print('Conectado por', addr)
+            threading.Thread(target=self.handle_client, args=(conn,)).start()
+
+    def handle_client(self, conn):
+        try:
+            msg_type = conn.recv(4)
+            if msg_type == b"FILE":
+                self.receive_file(conn)
+            elif msg_type == b"KEY":
+                self.receive_key(conn)
+            elif msg_type == b"LOGIN":
+                self.receive_login_request(conn)
+        finally:
+            conn.close()
+
+    def receive_file(self, conn):
+        file_name_length_data = conn.recv(4)
+        file_name_length = struct.unpack('!I', file_name_length_data)[0]
+
+        # Recebe o nome do arquivo
+        file_name = conn.recv(file_name_length).decode('utf-8')
+
+
+        with open(os.path.join(self.watch_path, file_name), 'wb') as f:
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                f.write(data)
+        print(f"Arquivo recebido e salvo como '{file_name}'.")
+
+    def receive_key(self, conn):
+        print("Chave recebida.")
+
+        key = conn.recv(1024)
+
+        with open('received_key', 'w') as f:
+            f.write(key)
+        print("Chave recebida e salva como 'received_key'.")
+
+    def receive_login_request(self, conn):
+        credentials = conn.recv(1024).decode('utf-8').split('\n')
+        username = credentials[0]
+        password = credentials[1]
+        print(f"Pedido de login recebido. Username: {username}, Password: {password}")

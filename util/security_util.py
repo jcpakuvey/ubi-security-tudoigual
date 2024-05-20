@@ -61,11 +61,13 @@ def encrypt_file(filename, public_key_file):
 
     # Save the encrypted file
     with open(filename + ".enc", "wb") as f:
-        f.write(encrypted_key)
+        #f.write(encrypted_key)
         f.write(iv)
         f.write(encrypted_data)
 
-def decrypt_file(encrypted_filename, private_key_file, password):
+    return encrypted_key
+
+def decrypt_file(encrypted_filename, private_key_file, password, encrypted_key):
     # Check if the files exist
     if not os.path.isfile(encrypted_filename) or not os.path.isfile(private_key_file):
         print('Erro: Arquivo não encontrado.')
@@ -81,7 +83,7 @@ def decrypt_file(encrypted_filename, private_key_file, password):
 
     # Read the encrypted file
     with open(encrypted_filename, "rb") as f:
-        encrypted_key = f.read(256)
+        #encrypted_key = f.read(256)
         iv = f.read(16)
         ciphertext = f.read()
 

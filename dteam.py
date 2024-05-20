@@ -38,7 +38,7 @@ def dteam():
 def start_server(host, port, private_key_file, public_key_file, password, watch_path):
 
     """Inicia o servidor seguro para comunicação e o watchdog para monitorar a pasta especificada"""
-    server = SecureServer(host, port, private_key_file, public_key_file, password)
+    server = SecureServer(host, port, private_key_file, public_key_file, password, watch_path)
 
     # Start the server in a separate thread or process if needed
     server_thread = threading.Thread(target=server.start_server)
@@ -57,19 +57,22 @@ def start_server(host, port, private_key_file, public_key_file, password, watch_
 def start_client(server_host, server_port, private_key_file, public_key_file, password, watch_path):
 
     """Inicia o servidor seguro para comunicação e o watchdog para monitorar a pasta especificada"""
-    client = Client(server_host, server_port, private_key_file, public_key_file, password)
+    client = Client(server_host, server_port, private_key_file, public_key_file, password, watch_path)
     
     # Start the watchdog to monitor the specified path
     start_watchdog(watch_path, client=client, server=None)
     
 
 @dteam.command()
-@click.option('--file_path', default='./share/teste.txt.enc', help='Arquivo para mostrar o conteudo original')
-@click.option('--private-key-file', default='private_server_key.pem', help='Caminho para o arquivo da chave privada')
+@click.option('--file_path', default='./share-server/teste.txt.enc', help='Arquivo para mostrar o conteudo original')
+@click.option('--private-key-file', default='private_client_key.pem', help='Caminho para o arquivo da chave privada')
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='Senha para a chave privada')
 def decrypt(file_path, private_key_file, password):
 
-    decrypt_file(file_path, private_key_file, password)
+    with open('received_key', 'w') as f:
+        encrypted_key = f.read()
+
+    decrypt_file(file_path, private_key_file, password, encrypted_key)
 
     decrypted_filename = file_path.replace(".enc", ".dec")
     with open(decrypted_filename, "r") as f:
@@ -107,8 +110,8 @@ def test():
         print(f"O arquivo '{public_key_file}' não foi encontrado.")
 
     generate_keys(private_key_file, public_key_file, password)
-    encrypt_file(filename, public_key_file)
-    decrypt_file(filename + '.enc', private_key_file, password)
+    encrypted_key = encrypt_file(filename, public_key_file)
+    decrypt_file(filename + '.enc', private_key_file, password, encrypted_key)
 
     sign_file(filename,private_key_file,password.encode('utf-8'))
     verify_signature(filename,public_key_file, filename + '.sig')

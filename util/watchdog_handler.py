@@ -1,5 +1,5 @@
 from watchdog.events import FileSystemEventHandler
-from security_util import sign_file
+from security_util import sign_file, encrypt_file
 
 import os
 import time
@@ -28,12 +28,12 @@ class WatchdogHandler(FileSystemEventHandler):
             time.sleep(1)
        
             if self.client:
-                sign_file(event.src_path, self.client.private_key_file, self.client.password)
-                self.client.handle_new_file(event.src_path)
+                encrypted_key = encrypt_file(event.src_path, self.client.public_key_file)
+                self.client.handle_new_file(event.src_path + ".enc", encrypted_key)
 
             elif self.server:
-                sign_file(event.src_path, self.server.private_key_file, self.server.password)
-                self.server.handle_new_file(event.src_path)
+                encrypted_key = encrypt_file(event.src_path, self.server.public_key_file)
+                self.server.handle_new_file(event.src_path + ".enc", encrypted_key)
 
             os.remove(event.src_path)
 

@@ -1,4 +1,5 @@
 import socket
+import struct
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import load_pem_public_key, load_pem_private_key
 from cryptography.hazmat.backends import default_backend
@@ -9,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'u
 from security_util import generate_keys
 
 class Client:
-    def __init__(self, server_host, server_port, private_key_file, public_key_file, password):
+    def __init__(self, server_host, server_port, private_key_file, public_key_file, password, watch_path):
         generate_keys(private_key_file, public_key_file, password)
 
         self.server_host = server_host
@@ -20,7 +21,7 @@ class Client:
         self.private_key = self.load_private_key()
         self.public_key = self.load_public_key()
         self.public_pem = self.serialize_public_key()
-
+        self.watch_path = watch_path
 
 
     def load_private_key(self):
@@ -41,23 +42,37 @@ class Client:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
-    def handle_new_file(self, path):
-        print(path)
-        print('client')
+    def handle_new_file(self, path, encrypted_key):
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            self.send_file(s, path)
 
-    def send_file(self, filename):
-        encrypted_filename = self.encrypt_file(filename)
+            self.send_key(s, encrypted_key)
+        #self.send_login_request('teste','teste')
+        
 
-        # Send the encrypted file to the server
+    def send_file(self,s, filename):
+        file_name = os.path.basename(filename)
+        file_name_encoded = file_name.encode('utf-8')
+        file_name_length = len(file_name_encoded)
+
+        s.connect((self.server_host, self.server_port))
+        s.sendall(b"FILE")
+        s.sendall(struct.pack('!I', file_name_length))  # Envia o tamanho do nome do arquivo
+        s.sendall(file_name_encoded)  # Envia o nome do arquivo
+        with open(filename, "rb") as f:
+            while (data := f.read(1024)):
+                s.sendall(data)  # Envia o conteúdo do arquivo
+        print(f"Arquivo {filename} enviado para o servidor.")
+
+    def send_key(self,s,  key):
+        s.sendall(b"KEY")
+        s.sendall(key)
+        print("Chave enviada para o servidor.")
+
+    def send_login_request(self, username, password):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.server_host, self.server_port))
-            with open(encrypted_filename, "rb") as f:
-                data = f.read()
-                s.sendall(data)
-
-        print(f"Arquivo {encrypted_filename} enviado para o servidor.")
-
-# Exemplo de uso
-#if __name__ == "__main__":
-#    client = Client(server_host='localhost', server_port=65432, public_key_file='public_key.pem')
-#    client.send_file('example.txt')
+            s.sendall(b"LOGIN")
+            s.sendall(username.encode('utf-8') + b'\n' + password.encode('utf-8'))
+            print("Pedido de login enviado para o servidor.")
