@@ -142,13 +142,13 @@ cython_debug/
 *.pem
 
 *.enc
-share/*.enc
-share/**/*.enc
+**/*.enc
 
 *.dec
-share/*.dec
-share/**/*.dec
+**/*.dec
 
 *.sig
-share/*.sig
-share/**/*.sig
+**/*.sig
+
+*.k
+**/*.k

@@ -13,7 +13,7 @@ from watchdog_handler import WatchdogHandler
 from security_util import generate_keys
 
 class SecureServer:
-    def __init__(self, host, port, private_key_file, public_key_file, password, watch_path):
+    def __init__(self, host, port, private_key_file, public_key_file, password, watch_path, key_path):
         generate_keys(private_key_file, public_key_file, password)
 
         self.host = host
@@ -25,7 +25,7 @@ class SecureServer:
         self.public_key = self.load_public_key()
         self.public_pem = self.serialize_public_key()
         self.watch_path = watch_path
-
+        self.key_path = key_path
 
     def load_private_key(self):
         with open(self.private_key_file, "rb") as key_file:
@@ -89,14 +89,15 @@ class SecureServer:
 
     def handle_client(self, conn):
         try:
-            msg_type = conn.recv(4)
-            if msg_type == b"FILE":
+            msg_type = conn.recv(2)
+            if msg_type == b"01":#FILE
                 self.receive_file(conn)
-            elif msg_type == b"KEY":
+            elif msg_type == b"02":#KEY
                 self.receive_key(conn)
-            elif msg_type == b"LOGIN":
+            elif msg_type == b"00":#LOGIN
                 self.receive_login_request(conn)
         finally:
+            print('fim conexão')
             conn.close()
 
     def receive_file(self, conn):
@@ -116,13 +117,21 @@ class SecureServer:
         print(f"Arquivo recebido e salvo como '{file_name}'.")
 
     def receive_key(self, conn):
-        print("Chave recebida.")
+        try:
+            print("Chave recebida.")
+            file_name_length_data = conn.recv(4)
+            file_name_length = struct.unpack('!I', file_name_length_data)[0]
 
-        key = conn.recv(1024)
+            # Recebe o nome do arquivo
+            file_name = conn.recv(file_name_length).decode('utf-8')
 
-        with open('received_key', 'w') as f:
-            f.write(key)
-        print("Chave recebida e salva como 'received_key'.")
+            key = conn.recv(1024)
+
+            with open(os.path.join(self.key_path, file_name), 'wb') as f:
+                f.write(key)
+            print(f"Chave recebida e salva como '{file_name}'.")
+        except Exception as e:
+            print(f"Ocorreu um erro ao receber a chave: {e}")
 
     def receive_login_request(self, conn):
         credentials = conn.recv(1024).decode('utf-8').split('\n')

@@ -35,10 +35,11 @@ def dteam():
 @click.option('--public-key-file', default='public_server_key.pem', help='Caminho para o arquivo da chave pública')
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='Senha para a chave privada')
 @click.option('--watch-path', default='./share-server', help='Pasta para monitorar com o Watchdog')
-def start_server(host, port, private_key_file, public_key_file, password, watch_path):
+@click.option('--key-path', default='./k-server', help='Pasta para salvar as chaves')
+def start_server(host, port, private_key_file, public_key_file, password, watch_path, key_path):
 
     """Inicia o servidor seguro para comunicação e o watchdog para monitorar a pasta especificada"""
-    server = SecureServer(host, port, private_key_file, public_key_file, password, watch_path)
+    server = SecureServer(host, port, private_key_file, public_key_file, password, watch_path, key_path)
 
     # Start the server in a separate thread or process if needed
     server_thread = threading.Thread(target=server.start_server)
@@ -69,7 +70,7 @@ def start_client(server_host, server_port, private_key_file, public_key_file, pa
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='Senha para a chave privada')
 def decrypt(file_path, private_key_file, password):
 
-    with open('received_key', 'w') as f:
+    with open('received_key', 'rb') as f:
         encrypted_key = f.read()
 
     decrypt_file(file_path, private_key_file, password, encrypted_key)
